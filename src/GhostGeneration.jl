@@ -43,3 +43,41 @@ function add_ghosts!(event::Vector{PseudoJet}, gen::GhostedArea)
 
     return event
 end
+
+# calculated the number of ghosts in a jet
+function ghosts_in_jet(cluster_seq::ClusterSequence, filter::Float64 = 1.0e-89)
+    # Retrieve the exclusive jets, but as `PseudoJet` types
+    jets = inclusive_jets(cluster_seq; ptmin = 5.0, T = PseudoJet)
+
+    # Get the constituents of the first jet
+    jet_constituents = JetReconstruction.constituents(jets[1], cluster_seq)
+
+    # determine the number of ghosts through checking each constituent's pt2
+    num_ghosts = 0
+    for c in jet_constituents
+        if c._pt2 < filter
+            num_ghost += 1
+        end
+    end
+
+    # return the number of ghosts
+    return num_ghosts
+end
+
+# calculated the area of a jet
+function GhostedAreaCalculation(event::Vector{PseudoJet}, resolution::int, cluster_seq::ClusterSequence)
+    # the total area is the rapidity range (-5,5) times the phi range (0, 2pi)
+    total_area = 10.0 * 6.28
+
+    gen = GhostedArea(resolution)
+
+    # ghost density is defined as the total number of ghosts divided by the total area
+    ghost_density = gen.n_ghosts / total_area
+
+    # add the ghosts to the event, and determine the number of ghosts in the jet
+    add_ghosts!(event, gen)
+    captured_ghosts = ghosts_in_jet(cluster_seq)
+
+    # area is equal to the number of ghosts in the jet divided by the density of ghosts
+    return captured_ghosts / ghost_density
+end
