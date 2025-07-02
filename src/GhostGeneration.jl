@@ -38,24 +38,22 @@ function add_ghosts!(event::Vector{PseudoJet}, gen::GhostedArea)
         phi = (j + rand_vals[index + 1]) * gen.phi_step
 
         # k + 1 is due to indexing beginning at 1 in julia
-        event[n_original + k + 1] = PseudoJet(pt = gen.ghost_pt, rap = rap, phi = phi)
+        event[n_original + k + 1] = PseudoJet(pt = gen.ghost_pt, rap = rap, phi = phi, _pure_ghost = true)
     end
 
     return event
 end
 
-# calculated the number of ghosts in a jet
-function ghosts_in_jet(cluster_seq::ClusterSequence, filter::Float64 = 1.0e-89)
-    # Retrieve the exclusive jets, but as `PseudoJet` types
-    jets = inclusive_jets(cluster_seq; ptmin = 5.0, T = PseudoJet)
+# calculate the number of ghosts in a jet
+function ghosts_in_jet(cluster_seq::ClusterSequence, jet::PseudoJet)
 
     # Get the constituents of the first jet
-    jet_constituents = JetReconstruction.constituents(jets[1], cluster_seq)
+    jet_constituents = JetReconstruction.constituents(jet, cluster_seq)
 
-    # determine the number of ghosts through checking each constituent's pt2
+    # determine the number of ghosts in the jet by checking each constituent's _pure_ghost field
     num_ghosts = 0
     for c in jet_constituents
-        if c._pt2 < filter
+        if c._pure_ghost
             num_ghost += 1
         end
     end
@@ -64,8 +62,8 @@ function ghosts_in_jet(cluster_seq::ClusterSequence, filter::Float64 = 1.0e-89)
     return num_ghosts
 end
 
-# calculated the area of a jet
-function GhostedAreaCalculation(event::Vector{PseudoJet}, resolution::int, cluster_seq::ClusterSequence)
+# calculate the area of a jet
+function GhostedAreaCalculation(cluster_seq::ClusterSequence, jet::PseudoJet, resolution::Int)
     # the total area is the rapidity range (-5,5) times the phi range (0, 2pi)
     total_area = 10.0 * 6.28
 
@@ -74,10 +72,57 @@ function GhostedAreaCalculation(event::Vector{PseudoJet}, resolution::int, clust
     # ghost density is defined as the total number of ghosts divided by the total area
     ghost_density = gen.n_ghosts / total_area
 
-    # add the ghosts to the event, and determine the number of ghosts in the jet
-    add_ghosts!(event, gen)
-    captured_ghosts = ghosts_in_jet(cluster_seq)
+    # determine the number of ghosts in the jet
+    captured_ghosts = ghosts_in_jet(cluster_seq, jet)
 
     # area is equal to the number of ghosts in the jet divided by the density of ghosts
     return captured_ghosts / ghost_density
+end
+
+# returns a vector that contains the number of ghosts in each jet
+function ghosts_in_jets(cluster_seq::ClusterSequence, jets::Vector{PseudoJet})
+
+    # initialize a vector representing the number of ghosts in each jet
+    ghosts_vector = Int[]
+
+    # loop through each jet
+    for jet in jets
+
+        # Get the constituents of the first jet
+        jet_constituents = JetReconstruction.constituents(jet, cluster_seq)
+
+        # determine the number of ghosts in the jet by checking each constituent's _pure_ghost field
+        num_ghosts = 0
+        for c in jet_constituents
+            if c._pure_ghost
+                num_ghost += 1
+            end
+        end
+
+        # add number of ghosts to the vector
+        push!(ghosts_vector, num_ghosts)
+    end
+
+    # return a vector representing the number of ghosts in each jet
+    return ghosts_vector
+end
+
+# returns a vector that contains the calculated area of each jets
+function GhostedAreasCalculation(cluster_seq::ClusterSequence, jets::Vector{PseudoJet}, resolution::Int)
+    # the total area is the rapidity range (-5,5) times the phi range (0, 2pi)
+    total_area = 10.0 * 6.28
+
+    gen = GhostedArea(resolution)
+
+    # ghost density is defined as the total number of ghosts divided by the total area
+    ghost_density = gen.n_ghosts / total_area
+
+    # determine the number of ghosts in each jet
+    captured_ghosts_vector = ghosts_in_jets(cluster_seq, jets)
+
+    # area is equal to the number of ghosts in the jet divided by the density of ghosts
+    areas_vector =  captured_ghosts_vector ./ ghost_density
+
+    # return a vector representing the area of each jet
+    return areas_vector
 end
