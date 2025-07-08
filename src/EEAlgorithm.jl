@@ -43,7 +43,8 @@ Calculate the dij distance between two ``e^+e^-``jets.
     @inbounds min(eereco[i].E2p, eereco[j].E2p) * dij_factor * eereco[i].nndist
 end
 
-function get_angular_nearest_neighbours!(eereco, algorithm, dij_factor)
+function get_angular_nearest_neighbours!(eereco, algorithm, dij_factor, beta = 1.0)
+    # Use beta for Valencia beam distance calculation
     # Get the initial nearest neighbours for each jet
     N = length(eereco)
     # this_dist_vector = Vector{Float64}(undef, N)
@@ -66,17 +67,34 @@ function get_angular_nearest_neighbours!(eereco, algorithm, dij_factor)
             eereco.nni[j] = better_nndist_j ? i : eereco.nni[j]
         end
     end
+    
     # Nearest neighbour dij distance
     for i in 1:N
         eereco.dijdist[i] = dij_dist(eereco, i, eereco[i].nni, dij_factor)
     end
     # For the EEKt algorithm, we need to check the beam distance as well
     # (This is structured to only check for EEKt once)
-    if algorithm == JetAlgorithm.EEKt
-        @inbounds for i in 1:N
-            beam_closer = eereco[i].E2p < eereco[i].dijdist
-            eereco.dijdist[i] = beam_closer ? eereco[i].E2p : eereco.dijdist[i]
-            eereco.nni[i] = beam_closer ? 0 : eereco.nni[i]
+
+    
+    
+    @inbounds for i in 1:N
+        if algorithm == JetAlgorithm.EEKt
+            beam_dist = eereco[i].E2p
+        elseif algorithm == JetAlgorithm.Valencia
+            E = sqrt(eereco[i].E2p)                  
+            E2beta = E^(2 * beta)                    
+            cosθ = abs(eereco[i].nz)              
+            sin2θ = 1.0 - cosθ^2                     
+            beam_dist = E2beta * sin2θ^beta   
+        else
+            continue
+        end
+    
+        # keeping the prior logic of checking if distance to beam is smaller than distance to nearest neighbor
+        
+        if beam_dist < eereco[i].dijdist
+            eereco.dijdist[i] = beam_dist
+            eereco.nni[i] = 0  # Merge to beam
         end
     end
 end
@@ -224,7 +242,7 @@ explicitly.
 """
 function ee_genkt_algorithm(particles::AbstractVector{T}; p = 1,
                             algorithm::JetAlgorithm.Algorithm = JetAlgorithm.Durham,
-                            R = 4.0, recombine = addjets, preprocess = nothing) where {T}
+                            R = 4.0, beta = 1.0, recombine = addjets, preprocess = nothing) where {T}
 
     # Check for consistency between algorithm and power
     (p, algorithm) = get_algorithm_power_consistency(p = p, algorithm = algorithm)
@@ -277,7 +295,7 @@ end
 This function is the actual implementation of the e+e- jet clustering algorithm.
 """
 function _ee_genkt_algorithm(; particles::AbstractVector{EEJet}, p = 1, R = 4.0,
-                             algorithm::JetAlgorithm.Algorithm = JetAlgorithm.Durham,
+                             algorithm::JetAlgorithm.Algorithm = JetAlgorithm.Durham, beta = 1.0,
                              recombine = addjets)
     # Bounds
     N::Int = length(particles)
@@ -286,15 +304,17 @@ function _ee_genkt_algorithm(; particles::AbstractVector{EEJet}, p = 1, R = 4.0,
     R2 = R^2
 
     # Constant factor for the dij metric and the beam distance function
+
+    
+    
+
     if algorithm == JetAlgorithm.Durham
         dij_factor = 2.0
     elseif algorithm == JetAlgorithm.EEKt
-        if R < π
-            dij_factor = 1 / (1 - cos(R))
-        else
-            dij_factor = 1 / (3 + cos(R))
-        end
-    else
+        dij_factor = (R < π) ? 1 / (1 - cos(R)) : 1 / (3 + cos(R))
+    elseif algorithm == JetAlgorithm.Valencia
+        dij_factor = 1.0 / R2 
+    else 
         throw(ArgumentError("Algorithm $algorithm not supported for e+e-"))
     end
 

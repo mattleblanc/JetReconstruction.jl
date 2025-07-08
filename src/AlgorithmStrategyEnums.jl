@@ -26,8 +26,11 @@ Scoped enumeration (using EnumX) representing different jet algorithms used in t
 - `GenKt`: The Generalised Kt algorithm (with arbitrary power).
 - `EEKt`: The Generalised e+e- kt algorithm.
 - `Durham`: The e+e- kt algorithm, aka Durham.
+- 'Valencia': The generalized e⁺e⁻ jet algorithm designed to reduce soft contamination and improve performance in forward regions. 
 """
-@enumx T=Algorithm JetAlgorithm AntiKt CA Kt GenKt EEKt Durham
+
+
+@enumx T=Algorithm JetAlgorithm AntiKt CA Kt GenKt EEKt Durham Valencia
 const AllJetRecoAlgorithms = [String(Symbol(x)) for x in instances(JetAlgorithm.Algorithm)]
 
 """
@@ -97,6 +100,12 @@ function get_algorithm_power_consistency(; p::Union{Real, Nothing},
         return (p = 1, algorithm = algorithm)
     end
 
+    #changes: implement inverse energy dependence
+
+    if algorithm == JetAlgorithm.Valencia
+        return (p = 1, algorithm = algorithm)
+    end
+
     # Otherwise we check the consistency between the algorithm and power
     if !isnothing(algorithm)
         power_from_alg = algorithm2power[algorithm]
@@ -147,8 +156,9 @@ Check if the algorithm is a e+e- reconstruction algorithm.
 # Returns
 `true` if the algorithm is a e+e- reconstruction algorithm, `false` otherwise.
 """
+
 function is_ee(algorithm::JetAlgorithm.Algorithm)
-    return algorithm in [JetAlgorithm.EEKt, JetAlgorithm.Durham]
+    return algorithm in [JetAlgorithm.EEKt, JetAlgorithm.Durham, JetAlgorithm.Valencia]
 end
 
 """
