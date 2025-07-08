@@ -2,7 +2,7 @@ include("common.jl")
 
 @testset "Ghost Creation Tests" begin
     resolution = 1000
-    gen = GhostedArea(resolution)
+    ghosted_area = GhostedArea(resolution)
 
     # Create original event with preexisting PseudoJets
     event = [
@@ -11,14 +11,13 @@ include("common.jl")
         PseudoJet(0.9, 0.5, 3.0, 4.3),
         PseudoJet(0.9, 6.0, 5.2, 0.4)
     ]
-    num_original = length(event)
+    n_original = length(event)
 
     # Use the function being tested
-    add_ghosts!(event, gen)
+    add_ghosts!(ghosted_area, event)
 
     # Ensure that the correct number of ghosts were generated
-    num_ghosts = resolution * resolution
-    @test length(event) == num_original + num_ghosts
+    @test length(event) == n_original + ghosted_area.n_ghosts
 
     # Ensure that the original jets have not changed
     @test event[1].px == 1.1
@@ -26,6 +25,9 @@ include("common.jl")
     @test event[3].pz == 3.0
     @test event[4].E == 0.4
 
+    # Error bound for testing ghost pt values
+    GHOST_PT2_THRESHOLD = 1.0e-89
+
     # Check that all added ghosts have the correct pt, use an error bound due to floating point error
-    @test all(i -> i._pt2 - 1.0e-90 <= 1.0e-89, event[(num_original + 1):end])
+    @test all(i -> abs(i._pt2 - 1.0e-90) <= GHOST_PT2_THRESHOLD, event[(n_original + 1):end])
 end

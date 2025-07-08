@@ -192,3 +192,9 @@ Compute the scalar transverse momentum (pt) of a PseudoJet.
 - The transverse momentum (pt) of the PseudoJet.
 """
 pt(p::PseudoJet) = sqrt(p._pt2)
+
+"""
+# Returns
+- The boolean _pure_ghost
+"""
+is_pure_ghost(p::PseudoJet) = p._pure_ghost
