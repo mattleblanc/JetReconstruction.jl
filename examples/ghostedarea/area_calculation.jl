@@ -20,6 +20,11 @@ function parse_command_line(args)
         arg_type = Int
         default = 0
 
+        "--distance", "-R"
+        help = "Distance parameter for jet merging"
+        arg_type = Float64
+        default = 0.4
+
         "--algorithm", "-A"
         help = """Algorithm to use for jet reconstruction: $(join(JetReconstruction.AllJetRecoAlgorithms, ", "))"""
         arg_type = JetAlgorithm.Algorithm
@@ -69,7 +74,7 @@ function cluster_event(event::Vector{PseudoJet}, args::Dict{Symbol, Any})
                     R = distance, p = p, algorithm = algorithm,
                     strategy = strategy)
 
-    clustered_jets = inclusive_jets(cluster_seq, ptmin = 0.0)
+    clustered_jets = inclusive_jets(cluster_seq, ptmin = 0.0, T = PseudoJet)
     return (cluster_seq, clustered_jets)
 end
 
@@ -116,9 +121,7 @@ function main()
     add_ghosts!(ghosted_area, all_jets)
 
     # Create clustering of PseudoJets
-    clustered_event = cluster_event(all_jets, args)
-    cluster_seq = cluster_event[1]
-    clustered_jets = cluster_event[2]
+    cluster_seq, clustered_jets = cluster_event(all_jets, args)
 
     # Calculate areas and print them
     areas_vector = ghosted_areas_calculation(ghosted_area, cluster_seq, clustered_jets)
