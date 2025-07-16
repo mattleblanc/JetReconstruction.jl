@@ -28,8 +28,6 @@ Scoped enumeration (using EnumX) representing different jet algorithms used in t
 - `Durham`: The e+e- kt algorithm, aka Durham.
 - 'Valencia': The generalized e⁺e⁻ jet algorithm designed to reduce soft contamination and improve performance in forward regions. 
 """
-
-
 @enumx T=Algorithm JetAlgorithm AntiKt CA Kt GenKt EEKt Durham Valencia
 const AllJetRecoAlgorithms = [String(Symbol(x)) for x in instances(JetAlgorithm.Algorithm)]
 
@@ -100,7 +98,6 @@ function get_algorithm_power_consistency(; p::Union{Real, Nothing},
         return (p = 1, algorithm = algorithm)
     end
 
-    #changes: implement inverse energy dependence
 
     if algorithm == JetAlgorithm.Valencia
         return (p = 1, algorithm = algorithm)

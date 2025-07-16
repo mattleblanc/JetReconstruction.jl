@@ -67,34 +67,29 @@ function get_angular_nearest_neighbours!(eereco, algorithm, dij_factor, beta = 1
             eereco.nni[j] = better_nndist_j ? i : eereco.nni[j]
         end
     end
-    
     # Nearest neighbour dij distance
     for i in 1:N
         eereco.dijdist[i] = dij_dist(eereco, i, eereco[i].nni, dij_factor)
     end
     # For the EEKt algorithm, we need to check the beam distance as well
     # (This is structured to only check for EEKt once)
-
-    
-    
-    @inbounds for i in 1:N
         if algorithm == JetAlgorithm.EEKt
-            beam_dist = eereco[i].E2p
+            @inbounds for i in 1:N
+                beam_closer = eereco[i].E2p < eereco[i].dijdist
+                eereco.dijdist[i] = beam_closer ? eereco[i].E2p : eereco.dijdist[i]
+                eereco.nni[i] = beam_closer ? 0 : eereco.nni[i]
+            end
         elseif algorithm == JetAlgorithm.Valencia
+        @inbounds for i in 1:N
             E = sqrt(eereco[i].E2p)                  
             E2beta = E^(2 * beta)                    
             cosθ = abs(eereco[i].nz)              
             sin2θ = 1.0 - cosθ^2                     
-            beam_dist = E2beta * sin2θ^beta   
-        else
-            continue
-        end
-    
-        # keeping the prior logic of checking if distance to beam is smaller than distance to nearest neighbor
-        
-        if beam_dist < eereco[i].dijdist
-            eereco.dijdist[i] = beam_dist
-            eereco.nni[i] = 0  # Merge to beam
+            beam_dist = E2beta * sin2θ^beta
+            if beam_dist < eereco[i].dijdist
+                eereco.dijdist[i] = beam_dist
+                eereco.nni[i] = 0
+            end
         end
     end
 end
@@ -304,14 +299,14 @@ function _ee_genkt_algorithm(; particles::AbstractVector{EEJet}, p = 1, R = 4.0,
     R2 = R^2
 
     # Constant factor for the dij metric and the beam distance function
-
-    
-    
-
     if algorithm == JetAlgorithm.Durham
         dij_factor = 2.0
     elseif algorithm == JetAlgorithm.EEKt
-        dij_factor = (R < π) ? 1 / (1 - cos(R)) : 1 / (3 + cos(R))
+        if R < π
+            dij_factor = 1 / (1 - cos(R))
+        else
+            dij_factor = 1 / (3 + cos(R))
+        end
     elseif algorithm == JetAlgorithm.Valencia
         dij_factor = 1.0 / R2 
     else 
