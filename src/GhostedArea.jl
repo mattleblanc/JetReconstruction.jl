@@ -50,9 +50,13 @@ function add_ghosts!(ghosted_area::GhostedArea, event::Vector{PseudoJet})
     return event
 end
 
+# generates and adds ghosts to multiple events
+function add_ghosts!(ghosted_area::GhostedArea, events::Vector{Vector{PseudoJet}})
+    return map(event -> add_ghosts!(ghosted_area, event), events)
+end
+
 # calculate the number of ghosts in a jet
 function ghosts_in_jet(cluster_seq::ClusterSequence, jet::PseudoJet)
-
     # Get the constituents of the jet
     jet_constituents = JetReconstruction.constituents(jet, cluster_seq)
 
@@ -62,11 +66,8 @@ end
 
 # calculate the area of a jet
 function ghosted_area_calculation(ghosted_area::GhostedArea, cluster_seq::ClusterSequence, jet::PseudoJet)
-    # determine the number of ghosts in the jet
-    captured_ghosts = ghosts_in_jet(cluster_seq, jet)
-
     # area is equal to the number of ghosts in the jet divided by the density of ghosts
-    return captured_ghosts / ghosted_area.ghost_density
+    return ghosts_in_jet(cluster_seq, jet) ./ ghosted_area.ghost_density
 end
 
 # returns a vector that contains the number of ghosts in each jet

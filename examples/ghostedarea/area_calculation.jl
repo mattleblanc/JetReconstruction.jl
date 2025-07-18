@@ -55,11 +55,6 @@ end
 # Cluster an event, run after adding ghosts
 function cluster_event(event::Vector{PseudoJet}, args::Dict{Symbol, Any})
 
-    distance = args[:distance]
-    algorithm = args[:algorithm]
-    p = args[:power]
-    strategy = args[:strategy]
-
     new_event = PseudoJet[]
     for (i, pseudo_jet) in enumerate(event)
     # Reconstruct PseudoJet with cluster_hist_index for tracking
@@ -74,8 +69,8 @@ function cluster_event(event::Vector{PseudoJet}, args::Dict{Symbol, Any})
 
     # Create the clustering of the given vector of PseudoJets 
     cluster_seq = jet_reconstruct(new_event,
-                    R = distance, p = p, algorithm = algorithm,
-                    strategy = strategy)
+                    R = args[:distance], p = args[:power], algorithm = args[:algorithm],
+                    strategy = args[:strategy])
     
     # Plot the jets
     plt = jetsplot(new_event, cluster_seq; Module = CairoMakie)
