@@ -16,10 +16,10 @@ struct GhostedArea
             resolution * resolution,
             rap_max,
             rap_min,
-            Float64(abs(rap_max - rap_min) / resolution),
-            Float64(2π / resolution),
+            abs(rap_max - rap_min) / resolution,
+            2π / resolution,
             ghost_pt,
-            Float64((resolution * resolution) / (abs(rap_max - rap_min) * 2π)))
+            (resolution * resolution) / (abs(rap_max - rap_min) * 2π))
     end
 end
 
@@ -56,16 +56,8 @@ function ghosts_in_jet(cluster_seq::ClusterSequence, jet::PseudoJet)
     # Get the constituents of the jet
     jet_constituents = JetReconstruction.constituents(jet, cluster_seq)
 
-    # determine the number of ghosts in the jet by checking each constituent's _pure_ghost field
-    n_ghosts_in_jet = 0
-    for c in jet_constituents
-        if is_pure_ghost(c)
-            n_ghosts_in_jet += 1
-        end
-    end
-
-    # return the number of ghosts
-    return n_ghosts_in_jet
+    # return the number of ghosts in the jet by checking each constituent's _pure_ghost field
+    return count(is_pure_ghost, jet_constituents)
 end
 
 # calculate the area of a jet
@@ -79,32 +71,11 @@ end
 
 # returns a vector that contains the number of ghosts in each jet
 function ghosts_in_jets(cluster_seq::ClusterSequence, jets::Vector{PseudoJet})
-
-    # initialize a vector representing the number of ghosts in each jet
-    ghosts_vector = Int[]
-
-    # loop through each jet
-    for jet in jets
-
-        # find number of ghosts in the current jet
-        n_ghosts_in_jet = ghosts_in_jet(cluster_seq, jet)
-
-        # add number of ghosts to the vector
-        push!(ghosts_vector, n_ghosts_in_jet)
-    end
-
-    # return a vector representing the number of ghosts in each jet
-    return ghosts_vector
+    return map(jet -> ghosts_in_jet(cluster_seq, jet), jets)
 end
 
 # returns a vector that contains the calculated area of each jets
 function ghosted_areas_calculation(ghosted_area::GhostedArea, cluster_seq::ClusterSequence, jets::Vector{PseudoJet})
-    # determine the number of ghosts in each jet
-    captured_ghosts_vector = ghosts_in_jets(cluster_seq, jets)
-
     # area is equal to the number of ghosts in the jet divided by the density of ghosts
-    areas_vector =  captured_ghosts_vector ./ ghosted_area.ghost_density
-
-    # return a vector representing the area of each jet
-    return areas_vector
+    return ghosts_in_jets(cluster_seq, jets) ./ ghosted_area.ghost_density
 end
