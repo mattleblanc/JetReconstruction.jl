@@ -97,4 +97,7 @@ export FinalJet, FinalJets
 include("GhostedArea.jl")
 export GhostedArea, add_ghosts!, ghosted_area_calculation, ghosted_areas_calculation
 
+include("PseudoJet.jl")
+export is_pure_ghost
+
 end

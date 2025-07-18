@@ -1,5 +1,7 @@
 using ArgParse
 using Logging
+using Plots
+using CairoMakie
 
 using LorentzVectorHEP
 using JetReconstruction
@@ -65,7 +67,8 @@ function cluster_event(event::Vector{PseudoJet}, args::Dict{Symbol, Any})
                     JetReconstruction.py(pseudo_jet),
                     JetReconstruction.pz(pseudo_jet),
                     JetReconstruction.energy(pseudo_jet);
-                    cluster_hist_index = i)
+                    cluster_hist_index = i, 
+                    _pure_ghost = is_pure_ghost(pseudo_jet))
     push!(new_event, new_pseudo_jet)
     end
 
@@ -73,8 +76,13 @@ function cluster_event(event::Vector{PseudoJet}, args::Dict{Symbol, Any})
     cluster_seq = jet_reconstruct(new_event,
                     R = distance, p = p, algorithm = algorithm,
                     strategy = strategy)
+    
+    # Plot the jets
+    plt = jetsplot(new_event, cluster_seq; Module = CairoMakie)
+    save("clustering.png", plt)
 
-    clustered_jets = inclusive_jets(cluster_seq, ptmin = 0.0, T = PseudoJet)
+    # Get the clustered jets from the cluster sequence
+    clustered_jets = inclusive_jets(cluster_seq, ptmin = 5.0, T = PseudoJet)
     return (cluster_seq, clustered_jets)
 end
 
@@ -123,9 +131,11 @@ function main()
     # Create clustering of PseudoJets
     cluster_seq, clustered_jets = cluster_event(all_jets, args)
 
-    # Calculate areas and print them
+    # Calculate areas, print them, and graph them
     areas_vector = ghosted_areas_calculation(ghosted_area, cluster_seq, clustered_jets)
     println(areas_vector)
+    h1 = histogram(areas_vector, bins = 20, title = "Ghosted Areas", xlabel = "Area", ylabel = "Count", fmt = :png)
+    savefig(h1, "ghosted_areas.png")
 end
 
 main()

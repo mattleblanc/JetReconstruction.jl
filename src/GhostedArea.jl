@@ -11,7 +11,7 @@ struct GhostedArea
 
     # constructor
     # default value of ghost_pt set to 1.0e-45 as -45 is the smallest magnitude that doesn't result in the value defaulting to 0
-    function GhostedArea(resolution::Int; rap_max::Float64 = 5.0, rap_min::Float64 = -5.0, ghost_pt::Float64 = 1.0e-45)
+    function GhostedArea(resolution::Int; rap_max::Float64 = 10.0, rap_min::Float64 = -10.0, ghost_pt::Float64 = 1.0e-45)
         new(resolution,
             resolution * resolution,
             rap_max,
@@ -40,7 +40,7 @@ function add_ghosts!(ghosted_area::GhostedArea, event::Vector{PseudoJet})
         # index to iterate through the random values
         index = 2k + 1
 
-        rap = (i + rand_vals[index]) * ghosted_area.rapidity_step
+        rap = ghosted_area.rap_min + (i + rand_vals[index]) * ghosted_area.rapidity_step
         phi = (j + rand_vals[index + 1]) * ghosted_area.phi_step
 
         # k + 1 is due to indexing beginning at 1 in julia
