@@ -55,30 +55,20 @@ end
 # Cluster an event, run after adding ghosts
 function cluster_event(event::Vector{PseudoJet}, args::Dict{Symbol, Any})
 
-    new_event = PseudoJet[]
-    for (i, pseudo_jet) in enumerate(event)
-    # Reconstruct PseudoJet with cluster_hist_index for tracking
-    new_pseudo_jet = PseudoJet(JetReconstruction.px(pseudo_jet),
-                    JetReconstruction.py(pseudo_jet),
-                    JetReconstruction.pz(pseudo_jet),
-                    JetReconstruction.energy(pseudo_jet);
-                    cluster_hist_index = i, 
-                    _pure_ghost = is_pure_ghost(pseudo_jet))
-    push!(new_event, new_pseudo_jet)
-    end
-
     # Create the clustering of the given vector of PseudoJets 
-    cluster_seq = jet_reconstruct(new_event,
+    cluster_seq = jet_reconstruct(event,
                     R = args[:distance], p = args[:power], algorithm = args[:algorithm],
                     strategy = args[:strategy])
-    
-    # Plot the jets
-    plt = jetsplot(new_event, cluster_seq; Module = CairoMakie)
-    save("clustering.png", plt)
 
     # Get the clustered jets from the cluster sequence
-    clustered_jets = inclusive_jets(cluster_seq, ptmin = 5.0, T = PseudoJet)
+    clustered_jets = inclusive_jets(cluster_seq, ptmin = 10.0, T = PseudoJet)
     return (cluster_seq, clustered_jets)
+end
+
+function cluster_events(events::Vector{Vector{PseudoJet}}, args::Dict{Symbol, Any})
+    # Cluster each event and return a vector of tuples (cluster_seq, clustered_jets)
+    clustered_events = map(event -> cluster_event(event, args), events)
+    return collect(zip(clustered_events))
 end
 
 function main()
@@ -110,26 +100,27 @@ function main()
         args[:algorithm] = JetAlgorithm.AntiKt
     end
 
-    # all_jets: go through events and add jets to a single array
-    all_jets = PseudoJet[]
-
-    # Fill all_jets
+    event_areas_vector = Vector{Float64}[]
+    # Loop through each event, add ghosts, cluster, and calculate areas
     for event in events
-        for jet in event
-            push!(all_jets, jet)
+        add_ghosts!(ghosted_area, event)
+        cluster_seq, clustered_jets = cluster_event(event, args)
+
+        # Plot the first event
+        if event == events[1]
+            plt = jetsplot(event, cluster_seq; Module = CairoMakie)
+            save("clustering.png", plt)
         end
+        
+        areas_vector = ghosted_areas_calculation(ghosted_area, cluster_seq, clustered_jets)
+        push!(event_areas_vector, areas_vector)
     end
-
-    # Add ghosts to all_jets
-    add_ghosts!(ghosted_area, all_jets)
-
-    # Create clustering of PseudoJets
-    cluster_seq, clustered_jets = cluster_event(all_jets, args)
-
-    # Calculate areas, print them, and graph them
-    areas_vector = ghosted_areas_calculation(ghosted_area, cluster_seq, clustered_jets)
-    println(areas_vector)
-    h1 = histogram(areas_vector, bins = 20, title = "Ghosted Areas", xlabel = "Area", ylabel = "Count", fmt = :png)
+    
+    # Print the areas for each event
+    println(event_areas_vector)
+    
+    # Make a histogram of all the ghosted areas in every event
+    h1 = histogram(vcat(event_areas_vector...), bins = 20, title = "Ghosted Areas", xlabel = "Area", ylabel = "Count", fmt = :png)
     savefig(h1, "ghosted_areas.png")
 end
 

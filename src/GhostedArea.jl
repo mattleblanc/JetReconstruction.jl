@@ -44,7 +44,7 @@ function add_ghosts!(ghosted_area::GhostedArea, event::Vector{PseudoJet})
         phi = (j + rand_vals[index + 1]) * ghosted_area.phi_step
 
         # k + 1 is due to indexing beginning at 1 in julia
-        event[n_original + k + 1] = PseudoJet(pt = ghosted_area.ghost_pt, rap = rap, phi = phi, _pure_ghost = true)
+        event[n_original + k + 1] = PseudoJet(pt = ghosted_area.ghost_pt, rap = rap, phi = phi, cluster_hist_index = n_original + k + 1, _pure_ghost = true)
     end
 
     return event
