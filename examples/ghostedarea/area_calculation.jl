@@ -65,12 +65,6 @@ function cluster_event(event::Vector{PseudoJet}, args::Dict{Symbol, Any})
     return (cluster_seq, clustered_jets)
 end
 
-function cluster_events(events::Vector{Vector{PseudoJet}}, args::Dict{Symbol, Any})
-    # Cluster each event and return a vector of tuples (cluster_seq, clustered_jets)
-    clustered_events = map(event -> cluster_event(event, args), events)
-    return collect(zip(clustered_events))
-end
-
 function main()
     args = parse_command_line(ARGS)
     logger = ConsoleLogger(stdout, Logging.Info)
