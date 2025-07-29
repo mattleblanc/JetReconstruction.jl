@@ -33,6 +33,7 @@ struct PseudoJet <: FourMomentum
     _inv_pt2::Float64
     _rap::Float64
     _phi::Float64
+    _pure_ghost::Bool
 end
 
 """
@@ -46,7 +47,7 @@ Construct a PseudoJet from a four momentum `(px, py, pz, E)`` with cluster index
 If the (default) value of `cluster_hist_index=0` is used, the PseudoJet cannot be
 used in a reconstruction sequence.
 """
-function PseudoJet(px::Real, py::Real, pz::Real, E::Real; cluster_hist_index::Int = 0)
+function PseudoJet(px::Real, py::Real, pz::Real, E::Real; cluster_hist_index::Int = 0, pure_ghost = false)
     @muladd pt2 = px * px + py * py
     inv_pt2 = @fastmath 1.0 / pt2
     phi = pt2 == 0.0 ? 0.0 : atan(py, px)
@@ -68,7 +69,7 @@ function PseudoJet(px::Real, py::Real, pz::Real, E::Real; cluster_hist_index::In
         rap = 0.5 * log((pt2 + effective_m2) / (E_plus_pz * E_plus_pz))
         rap = pz > 0.0 ? -rap : rap
     end
-    PseudoJet(px, py, pz, E, cluster_hist_index, pt2, inv_pt2, rap, phi)
+    PseudoJet(px, py, pz, E, cluster_hist_index, pt2, inv_pt2, rap, phi, pure_ghost)
 end
 
 """
@@ -89,7 +90,7 @@ If the (default) value of `cluster_hist_index=0` is used, the PseudoJet cannot b
 used in a reconstruction sequence.
 """
 function PseudoJet(; pt::Real, rap::Real, phi::Real, m::Real = 0,
-                   cluster_hist_index::Int = 0)
+                   cluster_hist_index::Int = 0, pure_ghost = false)
     phi = phi < 0 ? phi + 2π : phi
     phi = phi > 2π ? phi - 2π : phi
     ptm = (m == 0) ? pt : sqrt(pt^2 + m^2)
@@ -101,7 +102,7 @@ function PseudoJet(; pt::Real, rap::Real, phi::Real, m::Real = 0,
     pz = @fastmath (pplus - pminus) / 2
     E = @fastmath (pplus + pminus) / 2
 
-    PseudoJet(px, py, pz, E, cluster_hist_index, pt * pt, 1 / (pt * pt), rap, phi)
+    PseudoJet(px, py, pz, E, cluster_hist_index, pt * pt, 1 / (pt * pt), rap, phi, pure_ghost)
 end
 
 """
@@ -109,8 +110,8 @@ end
 
 Construct a PseudoJet from a `LorentzVector` object with the cluster index.
 """
-function PseudoJet(jet::LorentzVector; cluster_hist_index::Int = 0)
-    PseudoJet(jet.x, jet.y, jet.z, jet.t; cluster_hist_index = cluster_hist_index)
+function PseudoJet(jet::LorentzVector; cluster_hist_index::Int = 0, pure_ghost = false)
+    PseudoJet(jet.x, jet.y, jet.z, jet.t; cluster_hist_index = cluster_hist_index, pure_ghost = pure_ghost)
 end
 
 """
@@ -118,9 +119,9 @@ end
 
 Construct a PseudoJet from a `LorentzVectorCyl` object with the given cluster index.
 """
-function PseudoJet(jet::LorentzVectorCyl; cluster_hist_index::Int = 0)
+function PseudoJet(jet::LorentzVectorCyl; cluster_hist_index::Int = 0, pure_ghost = false)
     PseudoJet(; pt = pt(jet), rap = rapidity(jet), phi = phi(jet), m = mass(jet),
-              cluster_hist_index = cluster_hist_index)
+              cluster_hist_index = cluster_hist_index, pure_ghost = pure_ghost)
 end
 
 """
@@ -138,9 +139,9 @@ The `cluster_hist_index` is optional, but needed if the `jet` is part of a
 reconstruction sequence. If not provided, it defaults to `0` as an "invalid"
 value.
 """
-function PseudoJet(jet::Any; cluster_hist_index::Int = 0)
+function PseudoJet(jet::Any; cluster_hist_index::Int = 0, pure_ghost = false)
     PseudoJet(px(jet), py(jet), pz(jet), energy(jet);
-              cluster_hist_index = cluster_hist_index)
+              cluster_hist_index = cluster_hist_index, pure_ghost = pure_ghost)
 end
 
 import Base.isvalid
@@ -191,3 +192,9 @@ Compute the scalar transverse momentum (pt) of a PseudoJet.
 - The transverse momentum (pt) of the PseudoJet.
 """
 pt(p::PseudoJet) = sqrt(p._pt2)
+
+"""
+# Returns
+- The boolean _pure_ghost
+"""
+is_pure_ghost(p::PseudoJet) = p._pure_ghost
