@@ -23,6 +23,10 @@ function parse_command_line(args)
         arg_type = Int
         default = 0
 
+        "--details"
+        help = "Print per-event density"
+        action = :store_true
+
         "files"
         help = "The HepMC3 event files to read."
         required = true
@@ -35,12 +39,18 @@ function main()
     args = parse_command_line(ARGS)
 
     for file in args[:files]
-        events = read_final_state_particles(file; maxevents = args[:maxevents],
-                                            skipevents = args[:skip], T = LorentzVector)
+        events = read_final_state_particles(file, LorentzVector{Float64};
+                                            maxevents = args[:maxevents],
+                                            skipevents = args[:skip])
         n_events = length(events)
         n_particles = Int[]
         for e in events
             push!(n_particles, length(e))
+        end
+        if args[:details]
+            for (i, n) in enumerate(n_particles)
+                println("Event $i: $n")
+            end
         end
         average_n = mean(n_particles)
         if args[:summary]
@@ -49,7 +59,9 @@ function main()
             println("File $file")
             println("  Number of events: $n_events")
             println("  Average number of particles: ", mean(n_particles))
-            println(histogram(n_particles))
+            if n_events > 1
+                println(histogram(n_particles))
+            end
         end
     end
 end
