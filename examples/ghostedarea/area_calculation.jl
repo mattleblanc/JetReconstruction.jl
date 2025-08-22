@@ -43,7 +43,7 @@ function parse_command_line(args)
         "--resolution"
         help = "Square root of number of ghosts used"
         arg_type = Int
-        default = 1000
+        default = 100
 
         "--data-file"
         help = "HepMC3 event file in HepMC3 to read."
@@ -61,7 +61,7 @@ function cluster_event(event::Vector{PseudoJet}, args::Dict{Symbol, Any})
                     strategy = args[:strategy])
 
     # Get the clustered jets from the cluster sequence
-    clustered_jets = inclusive_jets(cluster_seq, ptmin = 10.0, T = PseudoJet)
+    clustered_jets = inclusive_jets(cluster_seq, ptmin = 5.0, T = PseudoJet)
     return (cluster_seq, clustered_jets)
 end
 

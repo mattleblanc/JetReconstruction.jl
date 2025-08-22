@@ -11,7 +11,7 @@ struct GhostedArea
 
     # constructor
     # default value of ghost_pt set to 1.0e-45 as -45 is the smallest magnitude that doesn't result in the value defaulting to 0
-    function GhostedArea(resolution::Int; rap_max::Float64 = 10.0, rap_min::Float64 = -10.0, ghost_pt::Float64 = 1.0e-45)
+    function GhostedArea(resolution::Int; rap_max::Float64 = 5.0, rap_min::Float64 = -5.0, ghost_pt::Float64 = 1.0e-45)
         new(resolution,
             resolution * resolution,
             rap_max,
@@ -23,7 +23,19 @@ struct GhostedArea
     end
 end
 
-# generates and adds ghosts to an event (a set of PseudoJets)
+"""
+    add_ghosts!(ghosted_area::GhostedArea, event::Vector{PseudoJet})
+
+Adds ghost particles to a single event. Ghost particles are pseudo-particles
+used for jet area calculations.
+
+# Arguments
+- `ghosted_area::GhostedArea`: The ghosted area configuration.
+- `event::Vector{PseudoJet}`: The event to which ghosts will be added.
+
+# Returns
+The modified event with added ghost particles.
+"""
 function add_ghosts!(ghosted_area::GhostedArea, event::Vector{PseudoJet})
     # Set aside memory for output
     n_original = length(event)
@@ -50,12 +62,34 @@ function add_ghosts!(ghosted_area::GhostedArea, event::Vector{PseudoJet})
     return event
 end
 
-# generates and adds ghosts to multiple events
+"""
+    add_ghosts!(ghosted_area::GhostedArea, events::Vector{Vector{PseudoJet}})
+
+Adds ghost particles to multiple events.
+
+# Arguments
+- `ghosted_area::GhostedArea`: The ghosted area configuration.
+- `events::Vector{Vector{PseudoJet}}`: A collection of events to which ghosts will be added.
+
+# Returns
+A collection of modified events with added ghost particles.
+"""
 function add_ghosts!(ghosted_area::GhostedArea, events::Vector{Vector{PseudoJet}})
     return map(event -> add_ghosts!(ghosted_area, event), events)
 end
 
-# calculate the number of ghosts in a jet
+"""
+    ghosts_in_jet(cluster_seq::ClusterSequence, jet::PseudoJet)
+
+Calculates the number of ghost particles in a given jet.
+
+# Arguments
+- `cluster_seq::ClusterSequence`: The clustering sequence of the event.
+- `jet::PseudoJet`: The jet for which the ghost count is calculated.
+
+# Returns
+The number of ghost particles in the jet.
+"""
 function ghosts_in_jet(cluster_seq::ClusterSequence, jet::PseudoJet)
     # Get the constituents of the jet
     jet_constituents = JetReconstruction.constituents(jet, cluster_seq)
@@ -64,18 +98,53 @@ function ghosts_in_jet(cluster_seq::ClusterSequence, jet::PseudoJet)
     return count(is_pure_ghost, jet_constituents)
 end
 
-# calculate the area of a jet
+"""
+    ghosted_area_calculation(ghosted_area::GhostedArea, cluster_seq::ClusterSequence, jet::PseudoJet)
+
+Calculates the area of a jet based on the number of ghost particles it contains.
+
+# Arguments
+- `ghosted_area::GhostedArea`: The ghosted area configuration.
+- `cluster_seq::ClusterSequence`: The clustering sequence of the event.
+- `jet::PseudoJet`: The jet for which the area is calculated.
+
+# Returns
+The calculated area of the jet.
+"""
 function ghosted_area_calculation(ghosted_area::GhostedArea, cluster_seq::ClusterSequence, jet::PseudoJet)
     # area is equal to the number of ghosts in the jet divided by the density of ghosts
     return ghosts_in_jet(cluster_seq, jet) ./ ghosted_area.ghost_density
 end
 
-# returns a vector that contains the number of ghosts in each jet
+"""
+    ghosts_in_jets(cluster_seq::ClusterSequence, jets::Vector{PseudoJet})
+
+Calculates the number of ghost particles in each jet in a collection of jets.
+
+# Arguments
+- `cluster_seq::ClusterSequence`: The clustering sequence of the event.
+- `jets::Vector{PseudoJet}`: A collection of jets.
+
+# Returns
+A vector containing the number of ghost particles in each jet.
+"""
 function ghosts_in_jets(cluster_seq::ClusterSequence, jets::Vector{PseudoJet})
     return map(jet -> ghosts_in_jet(cluster_seq, jet), jets)
 end
 
-# returns a vector that contains the calculated area of each jets
+"""
+    ghosted_areas_calculation(ghosted_area::GhostedArea, cluster_seq::ClusterSequence, jets::Vector{PseudoJet})
+
+Calculates the area of each jet in a collection of jets based on the number of ghost particles they contain.
+
+# Arguments
+- `ghosted_area::GhostedArea`: The ghosted area configuration.
+- `cluster_seq::ClusterSequence`: The clustering sequence of the event.
+- `jets::Vector{PseudoJet}`: A collection of jets.
+
+# Returns
+A vector containing the calculated area of each jet.
+"""
 function ghosted_areas_calculation(ghosted_area::GhostedArea, cluster_seq::ClusterSequence, jets::Vector{PseudoJet})
     # area is equal to the number of ghosts in the jet divided by the density of ghosts
     return ghosts_in_jets(cluster_seq, jets) ./ ghosted_area.ghost_density
